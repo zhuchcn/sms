@@ -9,5 +9,3 @@ class Lexica():
         self.age = {row["term"]: row["weight"] for index, row in age.iterrows()}
         gender = pd.read_csv(os.path.join(basedir, "lexica/emnlp14gender.csv"))
         self.gender = {row["term"]: row["weight"] for index, row in gender.iterrows()}
-
-lexica = Lexica()

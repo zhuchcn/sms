@@ -4,12 +4,12 @@ import nltk
 import string
 import csv
 import re
-from .Lexica import lexica
+from Lexica import Lexica
 
 class TwitterLexica():
     def __init__(self, screen_name, max_tweets=200, count=200):
         self.api_setup()
-        self.lexica = lexica
+        self.lexica = Lexica()
         self.user_name = screen_name
         self.tweets = self.get_tweets(screen_name, max_tweets, count)
         
