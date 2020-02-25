@@ -74,12 +74,32 @@ class InstagramImageCrawler():
             print(f"{url} image saved")
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input-path', type=str)
-    parser.add_argument('-o', '--output-path', type=str)
-    parser.add_argument('-n', "--nthreads", type=int, default=1)
-    parser.add_argument('-p', '--prefix-index', action="store_true")
-    parser.add_argument('-v', '--verbose', action="store_true")
+    parser = argparse.ArgumentParser(
+        description="""
+        Download instagram post images.
+        """
+    )
+    parser.add_argument(
+        '-i', '--input-path', type=str,
+        help="Path to the input file. Must be a text file with post url in " +
+             "row."
+    )
+    parser.add_argument(
+        '-o', '--output-path', type=str,
+        help="The output directory to download images."
+    )
+    parser.add_argument(
+        '-n', "--nthreads", type=int, default=1,
+        help="Number of threads (must be larger than 0)."
+    )
+    parser.add_argument(
+        '-p', '--prefix-index', action="store_true",
+        help="Whether to prepend an number index to the file names."
+    )
+    parser.add_argument(
+        '-v', '--verbose', action="store_true",
+        help="Show messages."
+    )
     args = parser.parse_args()
 
     if not os.path.isdir(args.output_path):

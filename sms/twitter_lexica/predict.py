@@ -8,7 +8,24 @@ from .TwitterLexica import TwitterLexica
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        prog="twitter-lexica",
+        description = """
+    Predict Twitter user's age and gender using Lexica
+    (https://github.com/wwbp/lexica).
+
+    Twitter's python API tweepy (https://www.tweepy.org/) is used
+    to request data. Four shell environmental variables MUST be
+    set in order to let tweepy run successfully using the commands
+    below in your terminal (replace place holders to your own value).
+
+    export CONSUMER_KEY=\"your_value\"
+    export CONSUMER_SECRETE=\"your_value\"
+    export ACCESS_KEY=\"your_value\"
+    export ACCESS_SECRETE=\"your_value\"
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument(
         "-s", "--screen-name", type=str, default=None,
         help="Twitter user name"

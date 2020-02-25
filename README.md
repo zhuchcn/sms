@@ -1,3 +1,3 @@
 # Social Media Scripts
 
-Scripts for social network data scraping
+Scripts for social media data scraping

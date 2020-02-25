@@ -6,11 +6,6 @@ import csv
 import re
 from .Lexica import lexica
 
-consumer_key = os.environ.get("CONSUMER_KEY")
-consumer_secrete = os.environ.get("CONSUMER_SECRETE")
-access_key = os.environ.get("ACCESS_KEY")
-access_secrete = os.environ.get("ACCESS_SECRETE")
-
 class TwitterLexica():
     def __init__(self, screen_name, max_tweets=200, count=200):
         self.api_setup()
@@ -22,6 +17,20 @@ class TwitterLexica():
         return f"<TwitterLexica: {self.user_name}>"
     
     def api_setup(self):
+
+        consumer_key = os.environ.get("CONSUMER_KEY")
+        consumer_secrete = os.environ.get("CONSUMER_SECRETE")
+        access_key = os.environ.get("ACCESS_KEY")
+        access_secrete = os.environ.get("ACCESS_SECRETE")
+
+        if consumer_key is None :
+            raise ValueError("CONSUMER_KEY is not found. See -h/--help.")
+        if consumer_secrete is None:
+            raise ValueError("CONSUMER_SECRETE is not found. See -h/--help.")
+        if access_key is None:
+            raise ValueError("ACCESS_KEY is not found. See -h/--help.")
+        if access_secrete is None:
+            raise ValueError("ACCESS_SECRETE is not found. See -h/--help.")
 
         auth = tweepy.OAuthHandler(consumer_key, consumer_secrete)
         auth.set_access_token(access_key, access_secrete)

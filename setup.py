@@ -21,8 +21,8 @@ setup(
     },
     entry_points = {
         'console_scripts': [
-            'get_instagram_image = sms.instagram.get_instagram_image:main',
-            'twitter_lexica = sms.twitter_lexica.predict:main'
+            'instagram-image = sms.instagram.get_instagram_image:main',
+            'twitter-lexica = sms.twitter_lexica.predict:main'
         ]
     }
 )
