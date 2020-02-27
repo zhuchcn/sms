@@ -20,10 +20,12 @@ class InstagramPostComments():
         "commentCount": None
     }
     launchArgs = {
-        "headless": True
+        "headless": True,
+        "ignoreHTTPSErrors": True,
+        "args": ['--window-size=1366, 850']
     }
 
-    def __init__(self, url=None, postId=None, headless=True):
+    def __init__(self, url=None, postId=None, launchArgs = {"headless": True}):
         if url:
             if url.startswith("www"):
                 url = "https:://" + url
@@ -40,7 +42,9 @@ class InstagramPostComments():
             raise ValueError(
         "InstagramPostComments(): at least one of url or postId must be given."
         )
-        self.launchArgs = {"headless": headless}
+        for key in self.launchArgs.keys():
+            if key in launchArgs.keys():
+                self.launchArgs[key] = launchArgs[key]
     
     async def __aenter__(self):
         await self.launch()
@@ -50,11 +54,7 @@ class InstagramPostComments():
         await self.close()
     
     async def launch(self):
-        self.browser = await launch({
-            "headless": self.launchArgs["headless"],
-            "ignoreHTTPSErrors": True,
-            "args": ['--no-sandbox', '--window-size=1366, 850']
-        })
+        self.browser = await launch(self.launchArgs)
         self.page = await self.browser.newPage()
         await self.page.goto(self.post["url"])
         await self.page.setViewport({'width': 1366, "height": 750})
@@ -141,6 +141,15 @@ async def main():
         '-d', '--delay', type=int,
         help="Number of seconds to delay between requests."
     )
+    parser.add_argument(
+        '-n', '--non-headless', action="store_false",
+        help="Whether to run in a non-headless mode."
+    )
+    parser.add_argument(
+        '-u', '--user-data-dir', type=str,
+        help="Path to a user data directory."
+    )
+
     args = parser.parse_args()
 
     if not args.force:
@@ -155,6 +164,10 @@ async def main():
                 "-p/--file-comments: file already exists. " +
                 "Use -f/--force to overwrite."
             )
+    
+    launchArgs = {"headless": args.non_headless}
+    if args.user_data_dir:
+        launchArgs["userDataDir"] = args.user_data_dir
     
     with open(args.input_path, "rt") as fh:
         with open(args.file_posts, "w", newline="") as file_posts, \
@@ -173,6 +186,7 @@ async def main():
                 quoting=csv.QUOTE_ALL
             )
             commentsWriter.writeheader()
+
             for l in fh:
                 url = l.rstrip()
                 try:

@@ -56,6 +56,19 @@ To delay between each post request, use the `-d/--delay`. Must be integer. The v
 instagram-postComments -i urls.txt -p posts.csv -c comments.csv -d 3
 ```
 
+To specify a user temporary directory
+
+```bash
+mkdir temp
+instagram-postComments -i urls.txt -p posts.csv -c comments.csv -d 3 -u temp/
+```
+
+Run in a head mode
+
+```bash
+instagram-postComments -i urls.txt -p posts.csv -c comments.csv -d 3 -n
+```
+
 Get help
 
 ```bash
