@@ -147,8 +147,9 @@ async def main():
                 postsWriter.writerow(ipc.post)
                 commentsWriter.writerows(ipc.comments)
                 if args.delay > 0:
-                    print(f"sleeping for {args.delay} seconds..")
-                    await asyncio.sleep(args.delay)
+                    delay_add = (random() - 0.5) * args.delay / 2
+                    print(f"sleeping for {args.delay} + {delay_add} seconds..")
+                    await asyncio.sleep(args.delay + delay_add)
 
 def mainWrapper():
     asyncio.run(main())
