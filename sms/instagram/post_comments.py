@@ -4,22 +4,39 @@ from random import randint, random
 import argparse
 import os
 import csv
+import re
 
 
 class InstagramPostComments():
-    url = None
     browser = None
     page = None
     comments = {}
     post = {
+        "postId": None,
+        "url": None,
         "username": None,
         "likeCount": None,
         "postContent": None,
         "commentCount": None
     }
 
-    def __init__(self, url):
-        self.url = url
+    def __init__(self, url=None, postId=None):
+        if url:
+            if url.startswith("www"):
+                url = "https:://" + url
+            if not url.startswith("https://www.instagram.com/p/"):
+                raise ValueError("InstagramPostComments(): url {url} invalid")
+            self.post["url"] = url
+            self.post["postId"] = re.sub(
+                "^https://www.instagram.com/p/(\S+)/?$", r'\1', url
+            )
+        elif postId:
+            self.post["url"] = f"https://www.instagram.com/p{postId}/"
+            self.post["postId"] = postId
+        else:
+            raise ValueError(
+        "InstagramPostComments(): at least one of url or postId must be given."
+        )
     
     async def __aenter__(self):
         await self.launch()
@@ -31,11 +48,7 @@ class InstagramPostComments():
     async def launch(self):
         self.browser = await launch()
         self.page = await self.browser.newPage()
-        try:
-            await self.page.goto(self.url)
-        except pyppeteer.error as e:
-            print(self.url)
-            raise e
+        await self.page.goto(self.post["url"])
         while True:
             try:
                 await self.page.waitForSelector("button.dCJp8.afkep", timeout = 1000)
@@ -71,7 +84,9 @@ class InstagramPostComments():
             comment = await ul.querySelector("div.C4VMK span")
             comment = await comment.getProperty("textContent")
             comment = await comment.jsonValue()
-            self.comments.append({'user': user, "comment": comment})
+            self.comments.append({
+                'postId': self.post["postId"], 'user': user, "comment": comment
+            })
         self.post["commentCount"] = len(self.comments)
     
     async def close(self):
@@ -128,7 +143,7 @@ async def main():
     with open(args.input_path, "rt") as fh:
         with open(args.file_posts, "w", newline="") as file_posts, \
             open(args.file_comments, 'w', newline="") as file_comments:
-            posts_fieldnames = ["username", "likeCount",
+            posts_fieldnames = ["postId", "url", "username", "likeCount",
                                "postContent", "commentCount"]
             postsWriter = csv.DictWriter(
                 file_posts, fieldnames=posts_fieldnames,
@@ -136,7 +151,7 @@ async def main():
             )
             postsWriter.writeheader()
 
-            comments_fieldnames = ["user", "comment"]
+            comments_fieldnames = ["postId", "user", "comment"]
             commentsWriter = csv.DictWriter(
                 file_comments, fieldnames=comments_fieldnames,
                 quoting=csv.QUOTE_ALL
