@@ -13,3 +13,5 @@ pip install git+https://github.com/zhuchcn/sms.git
 + [twitter-lexica](https://github.com/zhuchcn/sms/tree/master/sms/twitter_lexica)
 
 + [instagram-image](https://github.com/zhuchcn/sms/tree/master/sms/instagram)
+
++ [instagram-postComments](https://github.com/zhuchcn/sms/tree/master/sms/instagram)

@@ -1,8 +1,8 @@
-# Get post images from instagram
+# Get instagram posts, comments, and images
 
 Download instagram post images. The images being downloaded are pretty small.
 
-## Usage
+## instagram-image
 
 The urls.txt must be a text file with only url in each row.
 
@@ -38,4 +38,26 @@ Get help
 
 ```bash
 instagram-image -h
+```
+
+## instagram-postComments
+
+Basic usage:
+
+```bash
+instagram-postComments -i urls.txt -p posts.csv -c comments.csv
+```
+
+The `urls.txt` must contain the full url in the pattern of 'https://www.instagram/p/xxxxx/'.
+
+To delay between each post request, use the `-d/--delay`. Must be integer. The value is in seconds.
+
+```bash
+instagram-postComments -i urls.txt -p posts.csv -c comments.csv -d 3
+```
+
+Get help
+
+```bash
+instagram-postComments -h
 ```
