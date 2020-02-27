@@ -28,7 +28,7 @@ class InstagramPostComments():
                 raise ValueError("InstagramPostComments(): url {url} invalid")
             self.post["url"] = url
             self.post["postId"] = re.sub(
-                "^https://www.instagram.com/p/(\S+)/?$", r'\1', url
+                "^https://www.instagram.com/p/(\S+?)/{0,1}$", r'\1', url
             )
         elif postId:
             self.post["url"] = f"https://www.instagram.com/p{postId}/"
