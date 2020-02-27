@@ -19,13 +19,16 @@ class InstagramPostComments():
         "postContent": None,
         "commentCount": None
     }
+    launchArgs = {
+        "headless": True
+    }
 
     def __init__(self, url=None, postId=None, headless=True):
         if url:
             if url.startswith("www"):
                 url = "https:://" + url
             if not url.startswith("https://www.instagram.com/p/"):
-                raise ValueError("InstagramPostComments(): url {url} invalid")
+                raise ValueError(f"InstagramPostComments(): url {url} invalid")
             self.post["url"] = url
             self.post["postId"] = re.sub(
                 "^https://www.instagram.com/p/(\S+?)/{0,1}$", r'\1', url
@@ -55,6 +58,13 @@ class InstagramPostComments():
         self.page = await self.browser.newPage()
         await self.page.goto(self.post["url"])
         await self.page.setViewport({'width': 1366, "height": 750})
+        h2Error = await self.page.querySelector("div.error-container h2")
+        if h2Error:
+            h2Error = await h2Error.getProperty("textContent")
+            h2Error = await h2Error.jsonValue()
+            if h2Error == "Sorry, this page isn't available.":
+                await self.close()
+                raise ValueError(h2Error)
         while True:
             try:
                 await self.page.waitForSelector("button.dCJp8.afkep", timeout = 1000)
@@ -164,7 +174,12 @@ async def main():
             )
             commentsWriter.writeheader()
             for l in fh:
-                ipc = await getPostComments(l.rstrip())
+                url = l.rstrip()
+                try:
+                    ipc = await getPostComments(url)
+                except ValueError as e:
+                    print(f"the url {url} is not available.")
+                    continue
                 postsWriter.writerow(ipc.post)
                 commentsWriter.writerows(ipc.comments)
                 if args.delay > 0:
