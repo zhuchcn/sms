@@ -20,7 +20,7 @@ class InstagramPostComments():
         "commentCount": None
     }
 
-    def __init__(self, url=None, postId=None):
+    def __init__(self, url=None, postId=None, headless=True):
         if url:
             if url.startswith("www"):
                 url = "https:://" + url
@@ -37,6 +37,7 @@ class InstagramPostComments():
             raise ValueError(
         "InstagramPostComments(): at least one of url or postId must be given."
         )
+        self.launchArgs = {"headless": headless}
     
     async def __aenter__(self):
         await self.launch()
@@ -46,9 +47,14 @@ class InstagramPostComments():
         await self.close()
     
     async def launch(self):
-        self.browser = await launch()
+        self.browser = await launch({
+            "headless": self.launchArgs["headless"],
+            "ignoreHTTPSErrors": True,
+            "args": ['--no-sandbox', '--window-size=1366, 850']
+        })
         self.page = await self.browser.newPage()
         await self.page.goto(self.post["url"])
+        await self.page.setViewport({'width': 1366, "height": 750})
         while True:
             try:
                 await self.page.waitForSelector("button.dCJp8.afkep", timeout = 1000)
