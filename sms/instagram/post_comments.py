@@ -84,7 +84,7 @@ class InstagramPostComments():
         likeCount = await likeCount.jsonValue()
         likeCount = int(likeCount.replace(",", ""))
 
-        postContent = await self.page.querySelector("[role=\"button\"].ZyFrc .C4VMK span")
+        postContent = await self.page.querySelector("[role=\"button\"].ZyFrc .C4VMK span, h1")
         postContent = await postContent.getProperty("textContent")
         postContent = await postContent.jsonValue()
 
@@ -98,7 +98,7 @@ class InstagramPostComments():
         if len(commentUls) == 0:
             self.post["commentCount"] = 0
             return
-            
+
         for ul in commentUls:
             user = await ul.querySelector("h3._6lAjh")
             user = await user.getProperty("textContent")
