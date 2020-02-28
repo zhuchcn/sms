@@ -74,3 +74,27 @@ Get help
 ```bash
 instagram-postComments -h
 ```
+
++ Mac users, if the job stops every ~220 iterations, it's very possible that the upper limit for file descriptors is too low, which is usually 256. To fix it, simply type the command below to your terminal and this will set the upper limit to 10000.
+
+```bash
+ulimit -Sn 10000
+```
+
+You can verify it by calling `ulimit -a`
+
+```bash
+ulimit -a
+```
+
+```
+-t: cpu time (seconds)              unlimited
+-f: file size (blocks)              unlimited
+-d: data seg size (kbytes)          unlimited
+-s: stack size (kbytes)             8192
+-c: core file size (blocks)         0
+-v: address space (kbytes)          unlimited
+-l: locked-in-memory size (kbytes)  unlimited
+-u: processes                       2784
+-n: file descriptors                10000
+```

@@ -22,6 +22,8 @@ class InstagramPostComments():
     launchArgs = {
         "headless": True,
         "ignoreHTTPSErrors": True,
+        #"dumpio": True,
+        # "logLevel": 10, # https://www.loggly.com/ultimate-guide/python-logging-basics/
         "args": ['--window-size=1366, 850']
     }
 
@@ -93,6 +95,10 @@ class InstagramPostComments():
     async def getComments(self):
         commentUls = await self.page.querySelectorAll("ul.Mr508")
         self.comments = []
+        if len(commentUls) == 0:
+            self.post["commentCount"] = 0
+            return
+            
         for ul in commentUls:
             user = await ul.querySelector("h3._6lAjh")
             user = await user.getProperty("textContent")
@@ -170,12 +176,12 @@ async def main():
                 "-p/--file-posts: file already exists. " +
                 "Use -f/--force to overwrite."
             )
-    
         if os.path.isfile(args.file_comments):
             raise parser.error(
                 "-p/--file-comments: file already exists. " +
                 "Use -f/--force to overwrite."
             )
+            
     if args.resume:
         with open(args.file_posts, newline="") as csvfile:
             spamreader = csv.reader(csvfile, delimiter=",", quotechar='"')
@@ -216,17 +222,19 @@ async def main():
                         continue
                     else:
                         resumeUrlFound = True
-                        continue    
+                        continue
+            
             try:
                 ipc = await getPostComments(url)
             except ValueError as e:
-                print(f"the url {url} is not available.")
+                print(f"the url {url} is not available.", flush=True)
                 continue
+
             postsWriter.writerow(ipc.post)
             commentsWriter.writerows(ipc.comments)
             if args.delay > 0:
                 delay_add = (random() - 0.5) * args.delay / 2
-                print(f"sleeping for {args.delay} + {delay_add} seconds..")
+                print(f"sleeping for {args.delay} + {delay_add} seconds..", flush=True)
                 await asyncio.sleep(args.delay + delay_add)
 
 def mainWrapper():
