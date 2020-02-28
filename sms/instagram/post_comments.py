@@ -134,6 +134,10 @@ async def main():
         help="The output csv file for comments."
     )
     parser.add_argument(
+        '-r', '--resume', action="store_true",
+        help="Resume stopped job."
+    )
+    parser.add_argument(
         '-f', '--force', action="store_true",
         help="Whether to overwrite the csv files for posts and comments."
     )
@@ -152,7 +156,15 @@ async def main():
 
     args = parser.parse_args()
 
-    if not args.force:
+    # launch arguments
+    launchArgs = {"headless": args.non_headless}
+    if args.user_data_dir:
+        launchArgs["userDataDir"] = args.user_data_dir
+
+    if args.force and args.resume:
+        raise parser.error("can't use both -f/--force and -r/--resume")
+
+    if not args.force and not args.resume:
         if os.path.isfile(args.file_posts):
             raise parser.error(
                 "-p/--file-posts: file already exists. " +
@@ -164,42 +176,58 @@ async def main():
                 "-p/--file-comments: file already exists. " +
                 "Use -f/--force to overwrite."
             )
+    if args.resume:
+        with open(args.file_posts, newline="") as csvfile:
+            spamreader = csv.reader(csvfile, delimiter=",", quotechar='"')
+            for row in spamreader:
+                resumeUrl = row[1]
+
+    if args.force:
+        if os.path.isfile(args.file_posts):
+            os.remove(args.file_posts)
+        if os.path.isfile(args.file_comments):
+            os.remove(args.file_comments)
     
-    launchArgs = {"headless": args.non_headless}
-    if args.user_data_dir:
-        launchArgs["userDataDir"] = args.user_data_dir
-    
-    with open(args.input_path, "rt") as fh:
-        with open(args.file_posts, "w", newline="") as file_posts, \
-            open(args.file_comments, 'w', newline="") as file_comments:
-            posts_fieldnames = ["postId", "url", "username", "likeCount",
-                               "postContent", "commentCount"]
-            postsWriter = csv.DictWriter(
-                file_posts, fieldnames=posts_fieldnames,
-                quoting=csv.QUOTE_ALL
-            )
+    with open(args.input_path, "rt") as fh, \
+            open(args.file_posts, "a", newline="") as file_posts, \
+            open(args.file_comments, 'a', newline="") as file_comments:
+        posts_fieldnames = ["postId", "url", "username", "likeCount",
+                            "postContent", "commentCount"]
+        postsWriter = csv.DictWriter(
+            file_posts, fieldnames=posts_fieldnames,
+            quoting=csv.QUOTE_ALL
+        )
+        comments_fieldnames = ["postId", "user", "comment"]
+        commentsWriter = csv.DictWriter(
+            file_comments, fieldnames=comments_fieldnames,
+            quoting=csv.QUOTE_ALL
+        )
+
+        if not args.resume:
+            commentsWriter.writeheader()
             postsWriter.writeheader()
 
-            comments_fieldnames = ["postId", "user", "comment"]
-            commentsWriter = csv.DictWriter(
-                file_comments, fieldnames=comments_fieldnames,
-                quoting=csv.QUOTE_ALL
-            )
-            commentsWriter.writeheader()
-
-            for l in fh:
-                url = l.rstrip()
-                try:
-                    ipc = await getPostComments(url)
-                except ValueError as e:
-                    print(f"the url {url} is not available.")
-                    continue
-                postsWriter.writerow(ipc.post)
-                commentsWriter.writerows(ipc.comments)
-                if args.delay > 0:
-                    delay_add = (random() - 0.5) * args.delay / 2
-                    print(f"sleeping for {args.delay} + {delay_add} seconds..")
-                    await asyncio.sleep(args.delay + delay_add)
+        resumeUrlFound = False
+        for l in fh:
+            url = l.rstrip()
+            if args.resume:
+                if resumeUrlFound is False:
+                    if url != resumeUrl:
+                        continue
+                    else:
+                        resumeUrlFound = True
+                        continue    
+            try:
+                ipc = await getPostComments(url)
+            except ValueError as e:
+                print(f"the url {url} is not available.")
+                continue
+            postsWriter.writerow(ipc.post)
+            commentsWriter.writerows(ipc.comments)
+            if args.delay > 0:
+                delay_add = (random() - 0.5) * args.delay / 2
+                print(f"sleeping for {args.delay} + {delay_add} seconds..")
+                await asyncio.sleep(args.delay + delay_add)
 
 def mainWrapper():
     asyncio.run(main())
