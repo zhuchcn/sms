@@ -80,9 +80,15 @@ class InstagramPostComments():
         username = await username.jsonValue()
         
         likeCount = await self.page.querySelector("button.sqdOP.yWX7d span")
+        if likeCount:
+            hasComma = True
+        else:
+            hasComma = False
+            likeCount = await self.page.querySelector("button.sqdOP.yWX7d")
         likeCount = await likeCount.getProperty("textContent")
         likeCount = await likeCount.jsonValue()
-        likeCount = int(likeCount.replace(",", ""))
+        if hasComma:
+            likeCount = int(likeCount.replace(",", ""))
 
         postContent = await self.page.querySelector("[role=\"button\"].ZyFrc .C4VMK span, h1")
         postContent = await postContent.getProperty("textContent")
@@ -115,8 +121,8 @@ class InstagramPostComments():
         await self.browser.close()
 
 
-async def getPostComments(url):
-    async with InstagramPostComments(url) as ipc:
+async def getPostComments(url, launchArgs = {"headless": True}):
+    async with InstagramPostComments(url, launchArgs=launchArgs) as ipc:
         await ipc.getPost()
         await ipc.getComments()
         return ipc
@@ -225,7 +231,7 @@ async def main():
                         continue
             
             try:
-                ipc = await getPostComments(url)
+                ipc = await getPostComments(url, launchArgs=launchArgs)
             except ValueError as e:
                 print(f"the url {url} is not available.", flush=True)
                 continue
