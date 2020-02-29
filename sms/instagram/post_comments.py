@@ -17,11 +17,12 @@ class InstagramPostComments():
         "username": None,
         "likeCount": None,
         "postContent": None,
-        "commentCount": None
+        "commentCount": None,
     }
     launchArgs = {
         "headless": True,
         "ignoreHTTPSErrors": True,
+        #"executablePath": '/Applications/Google Chrome.app'
         #"dumpio": True,
         # "logLevel": 10, # https://www.loggly.com/ultimate-guide/python-logging-basics/
         "args": ['--window-size=1366, 850']
@@ -91,8 +92,11 @@ class InstagramPostComments():
             likeCount = int(likeCount.replace(",", ""))
 
         postContent = await self.page.querySelector("[role=\"button\"].ZyFrc .C4VMK span, h1")
-        postContent = await postContent.getProperty("textContent")
-        postContent = await postContent.jsonValue()
+        if postContent:
+            postContent = await postContent.getProperty("textContent")
+            postContent = await postContent.jsonValue()
+        else:
+            postContent = None
 
         self.post["username"] = username
         self.post["likeCount"] = likeCount
@@ -233,8 +237,11 @@ async def main():
             try:
                 ipc = await getPostComments(url, launchArgs=launchArgs)
             except ValueError as e:
-                print(f"the url {url} is not available.", flush=True)
-                continue
+                if str(e) == "Sorry, this page isn't available.":
+                    print(f"the url {url} is not available.", flush=True)
+                    continue
+                else:
+                    raise e
 
             postsWriter.writerow(ipc.post)
             commentsWriter.writerows(ipc.comments)
