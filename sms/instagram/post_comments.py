@@ -26,7 +26,7 @@ class InstagramPostComments():
         "headless": True,
         "ignoreHTTPSErrors": True,
         #"executablePath": '/Applications/Google Chrome.app'
-        "dumpio": True,
+        #"dumpio": True,
         # "logLevel": 10, # https://www.loggly.com/ultimate-guide/python-logging-basics/
         "args": ['--window-size=1366, 850']
     }
