@@ -86,16 +86,15 @@ class InstagramPostComments():
         username = await username.getProperty("textContent")
         username = await username.jsonValue()
         
-        likeCount = await self.page.querySelector("button.sqdOP.yWX7d span")
-        if likeCount:
-            hasComma = True
+        likeCount = await self.page.querySelector(".Nm9Fw button.sqdOP.yWX7d span")
+        if likeCount is None:
+            likeCount = await self.page.querySelector(".Nm9Fw button.sqdOP.yWX7d")
+        if likeCount is None:
+            likeCount = 0
         else:
-            hasComma = False
-            likeCount = await self.page.querySelector("button.sqdOP.yWX7d")
-        likeCount = await likeCount.getProperty("textContent")
-        likeCount = await likeCount.jsonValue()
-        if hasComma:
-            likeCount = int(likeCount.replace(",", ""))
+            likeCount = await likeCount.getProperty("textContent")
+            likeCount = await likeCount.jsonValue()
+            likeCount = int(re.sub(",", "",likeCount))
 
         postContent = await self.page.querySelector("[role=\"button\"].ZyFrc .C4VMK span, h1")
         if postContent:
