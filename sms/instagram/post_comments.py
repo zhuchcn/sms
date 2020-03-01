@@ -7,6 +7,9 @@ import csv
 import re
 
 
+_PAGE_UNAVAILABLE_ERROR = "Sorry, this page isn't available."
+_PAGE_CANT_OPEN_ERROR = "Page can't be opened."
+
 class InstagramPostComments():
     browser = None
     page = None
@@ -23,7 +26,7 @@ class InstagramPostComments():
         "headless": True,
         "ignoreHTTPSErrors": True,
         #"executablePath": '/Applications/Google Chrome.app'
-        #"dumpio": True,
+        "dumpio": True,
         # "logLevel": 10, # https://www.loggly.com/ultimate-guide/python-logging-basics/
         "args": ['--window-size=1366, 850']
     }
@@ -65,7 +68,7 @@ class InstagramPostComments():
         if h2Error:
             h2Error = await h2Error.getProperty("textContent")
             h2Error = await h2Error.jsonValue()
-            if h2Error == "Sorry, this page isn't available.":
+            if h2Error == _PAGE_UNAVAILABLE_ERROR:
                 await self.close()
                 raise ValueError(h2Error)
         while True:
@@ -74,6 +77,9 @@ class InstagramPostComments():
                 await self.page.click("button.dCJp8.afkep", {'delay': random() * 300})
             except asyncio.TimeoutError as e:
                 break
+        if await self.pageIsEmpty():
+            await self.close()
+            raise ValueError(_PAGE_CANT_OPEN_ERROR)
 
     async def getPost(self):
         username = await self.page.querySelector("div.e1e1d a")
@@ -123,6 +129,12 @@ class InstagramPostComments():
     
     async def close(self):
         await self.browser.close()
+    
+    async def pageIsEmpty(self):
+        return await self.page.evaluate('''()=>{
+            const root = document.querySelector("#react-root")
+            return root.innerHTML === ""
+        }''')
 
 
 async def getPostComments(url, launchArgs = {"headless": True}):
@@ -237,8 +249,11 @@ async def main():
             try:
                 ipc = await getPostComments(url, launchArgs=launchArgs)
             except ValueError as e:
-                if str(e) == "Sorry, this page isn't available.":
+                if str(e) == _PAGE_UNAVAILABLE_ERROR:
                     print(f"the url {url} is not available.", flush=True)
+                    continue
+                if str(e) == _PAGE_CANT_OPEN_ERROR:
+                    print(f"the url {url} is can't be opened.", flush=True)
                     continue
                 else:
                     raise e
