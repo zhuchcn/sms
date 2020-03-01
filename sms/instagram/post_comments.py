@@ -94,7 +94,9 @@ class InstagramPostComments():
         else:
             likeCount = await likeCount.getProperty("textContent")
             likeCount = await likeCount.jsonValue()
-            likeCount = int(re.sub(",", "",likeCount))
+            likeCount = re.sub(",", "",likeCount)
+            likeCount = re.sub(" like", "",likeCount)
+            likeCount = int(likeCount)
 
         postContent = await self.page.querySelector("[role=\"button\"].ZyFrc .C4VMK span, h1")
         if postContent:
