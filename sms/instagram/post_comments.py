@@ -253,7 +253,7 @@ async def main():
                     print(f"the url {url} is not available.", flush=True)
                     continue
                 if str(e) == _PAGE_CANT_OPEN_ERROR:
-                    print(f"the url {url} is can't be opened.", flush=True)
+                    print(f"the url {url} can't be opened.", flush=True)
                     continue
                 else:
                     raise e
