@@ -229,7 +229,22 @@ class FacebookPage():
             'node => node.getAttribute("id")'
         )
         await self.page.querySelector(f"#{commentsCountId}")
-        await self.page.waitForSelector(f"[data-ownerid='{commentsCountId}'] ul.uiList._4kg")
+        try:
+            await self.page.waitForSelector(
+                f"[data-ownerid='{commentsCountId}'] ul.uiList._4kg"
+            )
+        except asyncio.TimeoutError as e:
+            await self.page.waitForSelector(
+                f"[data-ownerid='{commentsCountId}'] .tooltipContent>div>div"
+            )
+            tooltipContent = await self.page.querySelectorEval(
+                f"[data-ownerid='{commentsCountId}'] .tooltipContent>div>div",
+                "node => node.textContent"
+            )
+            if tooltipContent == "No visible comments":
+                return 0
+            else:
+                raise asyncio.TimeoutError(e)
         lis = await self.page.querySelectorAll(f"[data-ownerid='{commentsCountId}'] ul.uiList._4kg li")
         if len(lis) < 20:
             return len(lis)

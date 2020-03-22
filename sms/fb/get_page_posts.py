@@ -58,7 +58,7 @@ async def main():
     args = parse_args()
     date = datetime.strptime(args.date, "%Y-%m-%d")
     if args.input_txt:
-        with open(args.intput_txt, "rt") as fh:
+        with open(args.input_txt, "rt") as fh:
             i = 0
             for line in fh:
                 if i == 0:
@@ -66,8 +66,11 @@ async def main():
                     i += 1
                 else:
                     mode = "a"
-                posts = await getFacebookPagePosts(line.rstrip(), date)
+                pageName = line.rstrip()
+                posts = await getFacebookPagePosts(pageName, date)
                 writePostsToTxt(posts, args.output_file, mode)
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                print(f"[{now}] @{pageName} saved to {args.output_file}")
     else:
         if args.pagename is None:
             raise ValueError("Either -n or -i must be given.")
