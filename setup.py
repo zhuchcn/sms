@@ -22,9 +22,10 @@ setup(
     },
     entry_points = {
         'console_scripts': [
-            'instagram-image = sms.instagram.get_instagram_image:main',
-            'instagram-postComments = sms.instagram.post_comments:mainWrapper',
-            'twitter-lexica = sms.twitter_lexica.predict:main'
+            'instagram-image=sms.instagram.get_instagram_image:main',
+            'instagram-postComments=sms.instagram.post_comments:mainWrapper',
+            'twitter-lexica=sms.twitter_lexica.predict:main',
+            'facebook-page=sms.fb.get_page_posts:mainWrapper'
         ]
     }
 )
