@@ -153,7 +153,7 @@ class FacebookPage():
         )
         url = url.split("?")[0]
         if url.endswith("/"):
-            url = re.sub("/$", "", re)
+            url = re.sub("/$", "", url)
         return f"https://www.facebook.com{url}"
     
     async def getPostReactionsCount(self, post):
