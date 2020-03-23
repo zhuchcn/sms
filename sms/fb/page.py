@@ -26,6 +26,7 @@ class FacebookPage():
     afterDate = ""
     browser = None
     page = None
+    fetchComments = False
     launchArgs = {
         "headless": True,
         "ignoreHTTPSErrors": True,
@@ -125,6 +126,11 @@ class FacebookPage():
                 
         await self.page.mouse.move(0,0)
         await self.page.click("#expanding_cta_close_button")
+
+        await self.page.waitForSelector("._5hn6")
+        await self.page.querySelectorEval("._5hn6", """
+            node => node.setAttribute("style", "display: none;")
+        """)
     
     async def getAllPosts(self):
         return await self.page.querySelectorAll(
@@ -144,7 +150,12 @@ class FacebookPage():
         )
         if postMessageDiv is None:
             return None
-        return await postMessageDiv.querySelectorEval("p", 'node => node.textContent')
+        try:
+            return await postMessageDiv.querySelectorEval(
+                "p", 'node => node.textContent'
+            )
+        except pyppeteer.errors.ElementHandleError:
+            return None
     
     async def getPostUrl(self, post):
         url = await post.querySelectorEval(
@@ -157,62 +168,84 @@ class FacebookPage():
         return f"https://www.facebook.com{url}"
     
     async def getPostReactionsCount(self, post):
-        reactionSpan = await post.querySelector("a span._3dlh._3dli span[data-hover='tooltip']")
+        reactionSpan = await post.querySelector(
+            "a span._3dlh._3dli span[data-hover='tooltip']"
+        )
         if reactionSpan is None:
             return 0
+
         await reactionSpan.hover()
         await self.page.mouse.move(0,0)
         await reactionSpan.hover()
-        await self.page.waitForSelector("a span._3dlh._3dli span[data-hover='tooltip'][id]")
+
+        await self.page.waitForSelector(
+            "a span._3dlh._3dli span[data-hover='tooltip'][id]",
+            timeout = 10000
+        )
         reactionId = await post.querySelectorEval(
-            "a span._3dlh._3dli  span[data-hover='tooltip'][id]",
+            "a span._3dlh._3dli span[data-hover='tooltip'][id]",
             'node => node.getAttribute("id")'
         )
+ 
         await reactionSpan.hover()
         await self.page.querySelector(f"#{reactionId}")
         await self.page.waitForSelector(
             f"[data-ownerid='{reactionId}'] ul.uiList._4kg",
             timeout=10000
         )
-        lis = await self.page.querySelectorAll(f"[data-ownerid='{reactionId}'] ul.uiList._4kg li")
-        if len(lis) < 20:
-            return len(lis)
-        else:
-            more = await self.page.querySelectorEval(
-                f"[data-ownerid='{reactionId}'] ul.uiList._4kg",
-                "node => node.lastChild.textContent"
-            )
-            more = re.sub("^.+ ([0-9,]+) .+$", '\\1', more)
+        lis = await self.page.querySelectorAllEval(
+            f"[data-ownerid='{reactionId}'] ul.uiList._4kg li",
+            """nodes => {
+                let lis = []
+                for(let i = 0; i < nodes.length; i++) {
+                    lis.push(nodes[i].textContent)
+                }
+                return lis
+            }"""
+        )
+        if bool(re.match("^and [0-9,]+ more…$", lis[-1])):
+            more = re.sub("^.+ ([0-9,]+) .+$", '\\1', lis[-1])
             more = re.sub(",", "", more)
             more = int(more)
-            return 19 + more
+            return len(lis) - 1  + more
+        return len(lis)
     
     async def getPostSharesCount(self, post):
-        sharesCountSpan = await post.querySelector("span._355t._4vn2[data-hover='tooltip']")
+        sharesCountSpan = await post.querySelector(
+            "span._355t._4vn2[data-hover='tooltip']"
+        )
         if sharesCountSpan is None:
             return 0
         await sharesCountSpan.hover()
         await self.page.mouse.move(0,0)
         await sharesCountSpan.hover()
-        await self.page.waitForSelector("span._355t._4vn2[data-hover='tooltip'][id]")
+        await self.page.waitForSelector(
+            "span._355t._4vn2[data-hover='tooltip'][id]"
+        )
         sharesCountId = await post.querySelectorEval(
             "span._355t._4vn2[data-hover='tooltip']",
             'node => node.getAttribute("id")'
         )
         await self.page.querySelector(f"#{sharesCountId}")
-        await self.page.waitForSelector(f"[data-ownerid='{sharesCountId}'] ul.uiList._4kg")
-        lis = await self.page.querySelectorAll(f"[data-ownerid='{sharesCountId}'] ul.uiList._4kg li")
-        if len(lis) < 5:
-           return len(lis)
-        else:
-           moreShares = await self.page.querySelectorEval(
-               f"[data-ownerid='{sharesCountId}'] ul.uiList._4kg",
-               "node => node.lastChild.textContent"
-           )
-           moreShares = re.sub("^.+ ([0-9,]+) .+$", '\\1', moreShares)
-           moreShares = re.sub(",", "", moreShares)
-           moreShares = int(moreShares)
-           return 4 + moreShares
+        await self.page.waitForSelector(
+            f"[data-ownerid='{sharesCountId}'] ul.uiList._4kg"
+        )
+        lis = await self.page.querySelectorAllEval(
+            f"[data-ownerid='{sharesCountId}'] ul.uiList._4kg li",
+            """nodes => {
+                let lis = []
+                for(let i = 0; i < nodes.length; i++) {
+                    lis.push(nodes[i].textContent)
+                }
+                return lis
+            }"""
+        )
+        if bool(re.match("^and [0-9,]+ more…$", lis[-1])):
+            moreShares = re.sub("^.+ ([0-9,]+) .+$", '\\1', lis[-1])
+            moreShares = re.sub(",", "", moreShares)
+            moreShares = int(moreShares)
+            return len(lis) - 1  + moreShares
+        return len(lis)
 
     async def getPostCommentsCount(self, post):
         commentsCountSpan = await post.querySelector(
@@ -245,18 +278,22 @@ class FacebookPage():
                 return 0
             else:
                 raise asyncio.TimeoutError(e)
-        lis = await self.page.querySelectorAll(f"[data-ownerid='{commentsCountId}'] ul.uiList._4kg li")
-        if len(lis) < 20:
-            return len(lis)
-        else:
-            moreComments = await self.page.querySelectorEval(
-                f"[data-ownerid='{commentsCountId}'] ul.uiList._4kg",
-                "node => node.lastChild.textContent"
-            )
-            moreComments = re.sub("^.+ ([0-9,]+) .+$", '\\1', moreComments)
-            moreComments = re.sub(",", "", moreComments)
-            moreComments = int(moreComments)
-            return 19 + moreComments
+        lis = await self.page.querySelectorAllEval(
+            f"[data-ownerid='{commentsCountId}'] ul.uiList._4kg li",
+            """nodes => {
+                let lis = []
+                for(let i = 0; i < nodes.length; i++) {
+                    lis.push(nodes[i].textContent)
+                }
+                return lis
+            }"""
+        )
+        if bool(re.match("^and [0-9,]+ more…$", lis[-1])):
+            more = re.sub("^.+ ([0-9,]+) .+$", '\\1', lis[-1])
+            more = re.sub(",", "", more)
+            more = int(more)
+            return len(lis) - 1  + more
+        return len(lis)
     
     async def getPostComments(self, post):
         postFetchId = await post.querySelectorEval(
