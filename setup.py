@@ -25,7 +25,7 @@ setup(
             'instagram-image=sms.instagram.get_instagram_image:main',
             'instagram-postComments=sms.instagram.post_comments:mainWrapper',
             'twitter-lexica=sms.twitter_lexica.predict:main',
-            'facebook-page=sms.fb.get_page_posts:mainWrapper'
+            'sms-fb=sms.fb.__main__:main'
         ]
     }
 )

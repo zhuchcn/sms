@@ -35,8 +35,13 @@ def writePostsToTxt(posts, filename, mode):
                 "shares_count": post["sharesCount"]
             })
 
-def parse_args():
-    parser = argparse.ArgumentParser()
+def parse_args(subparsers):
+    parser = subparsers.add_parser(
+        name="page",
+        description="get posts from facebook pages",
+        help="get posts from facebook pages"
+    )
+    parser.set_defaults(func=mainWrapper)
     parser.add_argument(
         "-n", "--pagename", type=str, help="Facebook Page Name"
     )
@@ -52,10 +57,8 @@ def parse_args():
     parser.add_argument(
         "-o", "--output-file", type=str, help="Output filename"
     )
-    return parser.parse_args()
 
-async def main():
-    args = parse_args()
+async def main(args):
     date = datetime.strptime(args.date, "%Y-%m-%d")
     if args.input_txt:
         with open(args.input_txt, "rt") as fh:
@@ -77,9 +80,6 @@ async def main():
         posts = await getFacebookPagePosts(args.pagename, date)
         writePostsToTxt(posts, args.output_file, "wt")
 
-def mainWrapper():
-    asyncio.run(main())
+def mainWrapper(args):
+    asyncio.run(main(args))
 
-if __name__ == '__main__':
-    mainWrapper()
-    

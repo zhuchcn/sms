@@ -9,12 +9,12 @@ from .utils import disable_timeout_pyppeteer
 
 disable_timeout_pyppeteer()
 
-class FacebookPage():
-    pageName = ""
-    afterDate = ""
+class FacebookPost():
+    _email = None
+    _password = None
     browser = None
     page = None
-    fetchComments = False
+    url = ""
     launchArgs = {
         "headless": True,
         "ignoreHTTPSErrors": True,
@@ -23,11 +23,11 @@ class FacebookPage():
         # "logLevel": 10, # https://www.loggly.com/ultimate-guide/python-logging-basics/
         "args": ['--window-size=1400, 800']
     }
-    posts = []
 
-    def __init__(self, pageName, afterDate, launchArgs = {"headless": True}):
-        self.pageName = pageName
-        self.afterDate = afterDate
+    def __init__(self, url, email=None, password=None, launchArgs={"headless": True}):
+        self.url = url
+        self._email = email
+        self._password = password
         for key in launchArgs.keys():
             self.launchArgs[key] = launchArgs[key]
     
@@ -40,63 +40,17 @@ class FacebookPage():
     
     async def launch(self):
         self.browser = await pyppeteer.launch(self.launchArgs)
-        self.page = await self.browser.newPage()
-        await self.page.goto(f"https://www.facebook.com/{self.pageName}/posts")
-        await self.page.setViewport({'width': 1400, 'height': 800})
     
     async def close(self):
         await self.browser.close()
-    
-    async def fetchAll(self, fetchComments=False):
-        self.fetchComments = fetchComments
-        await self.loadPostsByDate()
+
+    async def openPage(self):
+        self.page = await self.browser.newPage()
+        await self.page.goto(self.url)
+        await self.page.setViewport({'width': 1400, 'height': 800})
+        if not await self.pageIsAvailable():
+            raise ValueError("Page not available.")
         await self.loginDismiss()
-        posts = await self.getAllPosts()
-        for post in posts:
-            postDate = await self.getPostDate(post)
-            if postDate < self.afterDate:
-                return
-            await self.fetch(post)
-
-    async def fetch(self, post):
-        postMsg = await self.getPostMsg(post)
-        if postMsg is None:
-            return
-        newPost = {}
-        newPost["postMsg"] = postMsg
-        newPost["datetime"] = await self.getPostDate(post)
-        newPost["url"] = await self.getPostUrl(post)
-        newPost["id"] = newPost["url"].split('/')[-1]
-        newPost["reactionsCount"] = await self.getPostReactionsCount(post)
-        newPost["commentsCount"] = await self.getPostCommentsCount(post)
-        newPost["sharesCount"] = await self.getPostSharesCount(post)
-        if self.fetchComments:
-            if newPost["commentCount"] == 0:
-                newPost["comments"] = []
-            else:
-                newPost["comments"] = await self.getPostComments(post)
-        self.posts.append(newPost)
-    
-    async def loadPostsByDate(self):
-        scrollFrom = 0
-        while True:
-            lastPost = (await self.page.querySelectorAll("._427x"))[-1]
-            lastPostTime = await self.getPostDate(lastPost)
-            if lastPostTime < self.afterDate:
-                break
-
-            try:
-                await self.page.waitForSelector(".uiMorePagerPrimary", timeout = 1000)
-            except asyncio.TimeoutError:
-                break
-
-            scrollTo = await self.page.evaluate(
-                '''() => { return document.body.scrollHeight }'''
-            )
-            await self.page.evaluate(f'''() => {{
-                window.scrollBy({scrollFrom}, {scrollTo});
-            }}''')
-            scrollFrom = scrollTo
 
     async def loginDismiss(self):
         await self.page.evaluate('''() => {
@@ -119,18 +73,32 @@ class FacebookPage():
         await self.page.querySelectorEval("._5hn6", """
             node => node.setAttribute("style", "display: none;")
         """)
-    
-    async def getAllPosts(self):
-        return await self.page.querySelectorAll(
-            "._4-u2.mbm._4mrt._5jmm._5pat._5v3q._7cqq._4-u8"
-        )
 
-    async def getPostDate(self, post):
-        subtitleDiv = await post.querySelector("._5pcp._5lel._2jyu._232_")
-        timestamp = await subtitleDiv.querySelectorEval("abbr", '''node => {
-            return node.getAttribute("title")
-        }''')
-        return datetime.strptime(timestamp, "%A, %B %d, %Y at %I:%M %p")
+    async def pageIsAvailable(self):
+        try:
+            div = await self.page.waitForSelector("._585n._3-8n")
+            msg = await div.querySelectorEval(
+                "div._585r._50f4", "node => node.textContent"
+            )
+            if msg == "You must log in to continue.":
+                return False
+            return True
+        except asyncio.TimeoutError:
+            return True
+
+    async def fetchData(self):
+        post = await self.getPost()
+        return {
+            "url": self.url,
+            "content": await self.getPostMsg(post),
+            "timestamp": await self.getPostDate(post),
+            "reactions_count": await self.getReactionsCount(post),
+            "comments_count": await self.getPostCommentsCount(post),
+            "shares_count": await self.getPostSharesCount(post)
+        }
+
+    async def getPost(self):
+        return await self.page.querySelector(".userContentWrapper")
     
     async def getPostMsg(self, post):
         postMessageDiv = await post.querySelector(
@@ -145,17 +113,15 @@ class FacebookPage():
         except pyppeteer.errors.ElementHandleError:
             return None
     
-    async def getPostUrl(self, post):
-        url = await post.querySelectorEval(
-            ".l_c3pyo2v0u._5eit.i_c3pynyi2f.clearfix span.z_c3pyo1brp  a._5pcq",
-            'node => node.getAttribute("href")'
+    async def getPostDate(self, post):
+        timestamp =  await post.querySelectorEval(
+            ".timestampContent", 
+            "node => node.parentElement.getAttribute('title')"
         )
-        url = url.split("?")[0]
-        if url.endswith("/"):
-            url = re.sub("/$", "", url)
-        return f"https://www.facebook.com{url}"
+        timestamp = datetime.strptime(timestamp, "%A, %B %d, %Y at %I:%M %p")
+        return timestamp.strftime("%Y-%m-%d %H:%M:%S")
     
-    async def getPostReactionsCount(self, post):
+    async def getReactionsCount(self, post):
         reactionSpan = await post.querySelector(
             "a span._3dlh._3dli span[data-hover='tooltip']"
         )
@@ -283,54 +249,14 @@ class FacebookPage():
             return len(lis) - 1  + more
         return len(lis)
     
-    async def getPostComments(self, post):
-        postFetchId = await post.querySelectorEval(
-            '._4-u2.mbm._4mrt._5jmm._5pat._5v3q._7cqq._4-u8',
-            'node => node.getAttribute("id")'
+    async def login(self):
+        loginPage = await self.browser.newPage()
+        await loginPage.setViewport({'width': 1400, 'height': 800})
+        await loginPage.goto("https://www.facebook.com")
+        await loginPage.querySelectorEval(
+            "#email", f"node => node.setAttribute('value', '{self._email}')"
         )
-        while True:
-            try:
-                await self.page.waitForSelector(
-                    f"#{postFetchId} ._7a94._7a9d a._4sxc._42ft",
-                    timeout = 1000
-                )
-                moreCommentsBtn = await self.page.querySelector(
-                    f"#{postFetchId} ._7a94._7a9d a._4sxc._42ft"
-                )
-                await self.page.click(f"#{postFetchId} ._7a94._7a9d a._4sxc._42ft")
-            except asyncio.TimeoutError:
-                break
-            except pyppeteer.errors.ElementHandleError:
-                break
-            except pyppeteer.errors.PageError:
-                break
-        commentSpans = await post.querySelectorAll("[aria-label='Comment'] span._3l3x")
-        comments = []
-        for commentSpan in commentSpans:
-            seeMoreBtn = await commentSpan.querySelector("a._5v47.fss[role='button']")
-            if seeMoreBtn is not None:
-                await seeMoreBtn.click({'delay': random()*300})
-                moreSpan = await commentSpan.querySelector("span>span>span")
-                while moreSpan is None:
-                    await asyncio.sleep(0.1)
-                    moreSpan = await commentSpan.querySelector("span>span>span")
-                texts = await commentSpan.querySelectorAllEval(
-                    ":scope>span",  """nodes => {
-                        let texts;
-                        texts = [];
-                        for(let i = 0; i < nodes.length; i++){
-                            texts.push(nodes[i].textContent);
-                        }
-                        return texts
-                    }"""
-                )
-                comment = " ".join(texts)
-            else:
-                try:
-                    comment = await commentSpan.querySelectorEval(
-                        'span', 'node => node.textContent'
-                    )
-                except pyppeteer.errors.ElementHandleError:
-                    continue
-            comments.append(comment)
-            return comments
+        await loginPage.querySelectorEval(
+            "#pass", f"node => node.setAttribute('value', '{self._password}')"
+        )
+        await loginPage.click("#loginbutton")
