@@ -147,10 +147,21 @@ class InstagramPostComments():
         await self.browser.close()
     
     async def pageIsEmpty(self):
-        return await self.page.evaluate('''()=>{
+        isEmpty = await self.page.evaluate('''()=>{
             const root = document.querySelector("#react-root")
             return root.innerHTML === ""
         }''')
+        if isEmpty:
+            return True
+        
+        res = await self.page.querySelector("main ._07DZ3")
+        if res is not None:
+            res = await res.getProperty("textContent")
+            res = await res.jsonValue()
+            if re.search("this page isn't available", res):
+                return True
+        
+        return False
 
 
 async def getPostComments(url, launchArgs = {"headless": True}):
