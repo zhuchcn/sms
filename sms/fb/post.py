@@ -5,16 +5,14 @@ from datetime import datetime
 import re
 import csv
 
-from .utils import disable_timeout_pyppeteer
+from utils import disable_timeout_pyppeteer
 
 disable_timeout_pyppeteer()
 
 class FacebookPost():
-    _email = None
-    _password = None
     browser = None
     page = None
-    url = ""
+    logedIn = False
     launchArgs = {
         "headless": True,
         "ignoreHTTPSErrors": True,
@@ -24,10 +22,7 @@ class FacebookPost():
         "args": ['--window-size=1400, 800']
     }
 
-    def __init__(self, url, email=None, password=None, launchArgs={"headless": True}):
-        self.url = url
-        self._email = email
-        self._password = password
+    def __init__(self, launchArgs={"headless": True}):
         for key in launchArgs.keys():
             self.launchArgs[key] = launchArgs[key]
     
@@ -44,13 +39,14 @@ class FacebookPost():
     async def close(self):
         await self.browser.close()
 
-    async def openPage(self):
+    async def openPage(self, url):
         self.page = await self.browser.newPage()
-        await self.page.goto(self.url)
+        await self.page.goto(url)
         await self.page.setViewport({'width': 1400, 'height': 800})
         if not await self.pageIsAvailable():
             raise ValueError("Page not available.")
-        await self.loginDismiss()
+        if not self.logedIn:
+            await self.loginDismiss()
 
     async def loginDismiss(self):
         await self.page.evaluate('''() => {
@@ -86,10 +82,11 @@ class FacebookPost():
         except asyncio.TimeoutError:
             return True
 
-    async def fetchData(self):
+    async def fetch(self, url):
+        await self.openPage(url)
         post = await self.getPost()
         return {
-            "url": self.url,
+            "url": url,
             "content": await self.getPostMsg(post),
             "timestamp": await self.getPostDate(post),
             "reactions_count": await self.getReactionsCount(post),
@@ -249,14 +246,20 @@ class FacebookPost():
             return len(lis) - 1  + more
         return len(lis)
     
-    async def login(self):
+    async def login(self, email, password):
         loginPage = await self.browser.newPage()
         await loginPage.setViewport({'width': 1400, 'height': 800})
         await loginPage.goto("https://www.facebook.com")
         await loginPage.querySelectorEval(
-            "#email", f"node => node.setAttribute('value', '{self._email}')"
+            "#email", f"node => node.setAttribute('value', '{email}')"
         )
         await loginPage.querySelectorEval(
-            "#pass", f"node => node.setAttribute('value', '{self._password}')"
+            "#pass", f"node => node.setAttribute('value', '{password}')"
         )
-        await loginPage.click("#loginbutton")
+        await asyncio.wait([
+            loginPage.click("#loginbutton"),
+            loginPage.waitForNavigation()
+        ])
+        self.logedIn = True
+        
+        

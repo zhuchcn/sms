@@ -49,7 +49,7 @@ class InstagramPostComments():
     def __init__(self, url=None, postId=None, launchArgs = {"headless": True}):
         if url:
             if url.startswith("www"):
-                url = "https:://" + url
+                url = "https://" + url
             if not url.startswith("https://www.instagram.com/p/"):
                 raise ValueError(f"InstagramPostComments(): url {url} invalid")
             self.post["url"] = url
@@ -197,11 +197,18 @@ async def main():
         '-u', '--user-data-dir', type=str,
         help="Path to a user data directory."
     )
+    parser.add_argument(
+        '--no-sandbox', action="store_true",
+        help="will be parsed to launchArgs"
+    )
 
     args = parser.parse_args()
 
     # launch arguments
     launchArgs = {"headless": args.non_headless}
+    if args.no_sandbox:
+        launchArgs["args"] = ["--no-sandbox"]
+        
     if args.user_data_dir:
         launchArgs["userDataDir"] = args.user_data_dir
 
