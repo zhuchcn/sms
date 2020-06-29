@@ -65,6 +65,9 @@ class InstagramPostComments():
         )
         for key in self.launchArgs.keys():
             if key in launchArgs.keys():
+                if key == "args":
+                    self.launchArgs[key].extend(launchArgs[key])
+                    continue
                 self.launchArgs[key] = launchArgs[key]
     
     async def __aenter__(self):
@@ -219,7 +222,7 @@ async def main():
     launchArgs = {"headless": args.non_headless}
     if args.no_sandbox:
         launchArgs["args"] = ["--no-sandbox"]
-        
+
     if args.user_data_dir:
         launchArgs["userDataDir"] = args.user_data_dir
 
