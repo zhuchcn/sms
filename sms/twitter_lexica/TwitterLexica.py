@@ -4,7 +4,7 @@ import nltk
 import string
 import csv
 import re
-from Lexica import Lexica
+from .Lexica import Lexica
 
 class TwitterLexica():
     def __init__(self, screen_name, max_tweets=200, count=200):
